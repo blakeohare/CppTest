@@ -1,0 +1,4 @@
+// Sample Crayon app
+function main() {
+	print("Hello, World!");
+}
