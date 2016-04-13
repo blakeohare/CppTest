@@ -5,10 +5,13 @@
 #include <string.h>
 
 #include "tokens/tokenizer.h"
+#include "tokens/token.h"
+#include "tokens/tokenstream.h"
 #include "util/fileio.h"
 #include "util/xmlnode.h"
 
 using namespace std;
+using namespace Tokens;
 
 int main()
 {

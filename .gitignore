@@ -1,0 +1,3 @@
+*.o
+/Compiler/crayon
+.DS_store
