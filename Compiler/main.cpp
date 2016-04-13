@@ -1,9 +1,14 @@
 #include <iostream>
+#include <unordered_map>
+#include <vector>
+#include <string>
+#include <string.h>
+
 #include "tokens/tokenizer.h"
 #include "util/fileio.h"
+#include "util/xmlnode.h"
 
 using namespace std;
-using namespace Tokens;
 
 int main()
 {
@@ -17,8 +22,13 @@ int main()
 	{
 		Token* token = tokenstream->pop();
 		string* value = token->value;
-		cout << *value << endl;
+		//cout << *value << endl;
 	}
+
+	XmlNode* buildFileNode = parseXmlDocument("Test.build", "build");
+
+	XmlNode* targetNode = buildFileNode->getValue("target");
+	cout << buildFileNode->getValue("target")->getValue("platform")->getStringValue() << endl;
 
 	return 0;
 }

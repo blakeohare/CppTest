@@ -1,0 +1,6 @@
+<?xml encoding="UTF-8"?>
+<build>
+	<target name="foo">
+		<platform>csopengl</platform>
+	</target>
+</build>
