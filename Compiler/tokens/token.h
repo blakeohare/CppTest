@@ -12,15 +12,14 @@ namespace Tokens
 		public:
 			int line;
 			int col;
-			string* value;
-			string* file;
+			string value;
+			string file;
 
-			Token(int line, int col, string value, string* file)
+			Token(int line, int col, string value, string file)
 			{
-
 				this->line = line;
 				this->col = col;
-				this->value = new string(value);
+				this->value = value;
 				this->file = file;
 			}
 	};

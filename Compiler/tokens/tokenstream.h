@@ -19,6 +19,8 @@ namespace Tokens
 			Token* peek();
 			Token* pop();
 			bool hasMore();
+			bool isNext(string value);
+			Token* popExpected(string value);
 
 			TokenStream(vector<Token*>* tokens);
 	};

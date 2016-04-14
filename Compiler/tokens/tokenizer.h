@@ -7,7 +7,7 @@
 
 namespace Tokens
 {
-	TokenStream* tokenize(string* filename, string contents);
+	TokenStream* tokenize(string filename, string contents);
 }
 
 #endif

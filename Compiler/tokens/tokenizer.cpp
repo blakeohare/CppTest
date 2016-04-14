@@ -18,7 +18,7 @@ namespace Tokens
 		WORD,
 	};
 
-	TokenStream* tokenize(string* filename, string contents)
+	TokenStream* tokenize(string filename, string contents)
 	{
 		vector<Token*>* tokens = new vector<Token*>();
 
