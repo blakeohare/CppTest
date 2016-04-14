@@ -33,5 +33,11 @@ int main()
 	XmlNode* targetNode = buildFileNode->getValue("target");
 	cout << buildFileNode->getValue("target")->getValue("platform")->getStringValue() << endl;
 
+	vector<string>* files = FileIO::listDir("./");
+	for (int i = 0; i < files->size(); ++i)
+	{
+		cout << "File: " << files->at(i) << endl;
+	}
+
 	return 0;
 }

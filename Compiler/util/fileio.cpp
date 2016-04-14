@@ -2,8 +2,11 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include "fileio.h"
+#include "../util/util.h"
 
 using namespace std;
 namespace FileIO {
@@ -31,15 +34,46 @@ namespace FileIO {
 		return output;
 	}
 
-	vector<string> listDir(string path)
+	vector<string>* listDir(string path)
 	{
-		// TODO: this
-		vector<string> output;
+		// This works on a Mac, from a snippet that said it worked on linux.
+		// TODO: will need to do this on Windows, possibly #ifdef'ing a different solution.
+		vector<string>* output = new vector<string>();
+
+		DIR *dpdf;
+		struct dirent *epdf;
+
+		dpdf = opendir(path.c_str());
+		if (dpdf != NULL)
+		{
+			while ((epdf = readdir(dpdf)))
+			{
+				string s = string(epdf->d_name);
+				if (!streq(s, ".") &&
+					!streq(s, ".."))
+				{
+					output->push_back(s);
+				}
+			}
+			closedir(dpdf);
+		}
+
+		// TODO: go through and remove common garbage paths
+		// like .DS_Store, thumbs.db, .svn, .git*, etc.
+
 		return output;
 	}
 
 	bool isDirectory(string path)
 	{
-		return true;
+		struct stat s;
+		if (stat(path, &s) == 0)
+		{
+			if (s.st_mode & S_IFDIR)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
