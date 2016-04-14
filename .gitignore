@@ -1,3 +1,6 @@
 *.o
 /Compiler/crayon
 .DS_store
+*.VC.db
+/Compiler/vs/Debug
+*.vs
