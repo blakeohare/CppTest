@@ -2,6 +2,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <stdlib.h>
 
 #include "tokenstream.h"
 #include "token.h"
@@ -23,8 +24,8 @@ namespace Tokens
 		vector<Token*>* tokens = new vector<Token*>();
 
 		int length = contents.length();
-		int lines[length];
-		int cols[length];
+		int* lines = (int*)malloc(sizeof(int) * length);
+		int* cols = (int*)malloc(sizeof(int) * length);
 		int line = 0;
 		int col = 0;
 		char c;
@@ -182,6 +183,9 @@ namespace Tokens
 					break;
 			}
 		}
+
+		free(lines);
+		free(cols);
 		return new TokenStream(tokens);
 	}
 }

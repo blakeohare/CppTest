@@ -2,8 +2,14 @@
 #include <string>
 #include <iostream>
 #include <vector>
-#include <dirent.h>
 #include <sys/stat.h>
+
+#ifdef WIN32
+#include <windows.h>
+#include <tchar.h>
+#else
+#include <dirent.h>
+#endif
 
 #include "fileio.h"
 #include "../util/util.h"
@@ -34,12 +40,30 @@ namespace FileIO {
 		return output;
 	}
 
-	vector<string>* listDir(string path)
+	vector<wstring>* listDir(wstring path)
 	{
+		vector<wstring>* output = new vector<wstring>();
+#ifdef WIN32
+		WIN32_FIND_DATA data;
+		HANDLE hFind;
+
+		//const char * pathChar = path.c_str();
+		//MultiByteToWideChar(CP_ACP, MB_COMPOSITE, path, -1, NULL, 0);
+
+
+		hFind = FindFirstFile(path.c_str(), &data);
+		if (hFind != INVALID_HANDLE_VALUE)
+		{
+			do {
+				wstring s = wstring(data.cFileName);
+				output->push_back(s);
+			} while (FindNextFile(hFind, &data));
+			FindClose(hFind);
+		}
+
+#else
 		// This works on a Mac, from a snippet that said it worked on linux.
 		// TODO: will need to do this on Windows, possibly #ifdef'ing a different solution.
-		vector<string>* output = new vector<string>();
-
 		DIR *dpdf;
 		struct dirent *epdf;
 
@@ -48,7 +72,7 @@ namespace FileIO {
 		{
 			while ((epdf = readdir(dpdf)))
 			{
-				string s = string(epdf->d_name);
+				wstring s = wstring(epdf->d_name);
 				if (!streq(s, ".") &&
 					!streq(s, ".."))
 				{
@@ -58,8 +82,10 @@ namespace FileIO {
 			closedir(dpdf);
 		}
 
+#endif
 		// TODO: go through and remove common garbage paths
 		// like .DS_Store, thumbs.db, .svn, .git*, etc.
+		// Preferably here, outside of the #ifndef's
 
 		return output;
 	}
@@ -67,7 +93,7 @@ namespace FileIO {
 	bool isDirectory(string path)
 	{
 		struct stat s;
-		if (stat(path, &s) == 0)
+		if (stat(path.c_str(), &s) == 0)
 		{
 			if (s.st_mode & S_IFDIR)
 			{
