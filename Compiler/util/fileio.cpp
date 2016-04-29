@@ -44,7 +44,7 @@ namespace FileIO {
 					char* newContent = (char*) malloc(sizeof(char) * newRealLength);
 
 					// TODO: look up memcpy when I land
-					for (int i = 0; i < bytesRead; ++i) {
+					for (int i = 0; i < contentVirtualLength; ++i) {
 						newContent[i] = content[i];
 					}
 					free(content);

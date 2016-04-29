@@ -1,17 +1,17 @@
 #include <iostream>
+#include <string>
+#include <string.h> // still needed?
 #include <unordered_map>
 #include <vector>
-#include <string>
-#include <string.h>
 
+#include "build/buildcontext.h"
+#include "parser/nodes.h"
+#include "parser/parser.h"
 #include "tokens/tokenizer.h"
 #include "tokens/token.h"
 #include "tokens/tokenstream.h"
 #include "util/fileio.h"
 #include "util/xmlnode.h"
-#include "build/buildcontext.h"
-#include "parser/nodes.h"
-#include "parser/parser.h"
 
 using namespace std;
 using namespace Tokens;
@@ -60,49 +60,23 @@ int main(const int argc, const char** argv)
 			Tokens::tokenize(files.at(i), contents, &tokens);
 			Parser::parseExecutables(&tokens, &executables);
 		}
+
+		int functionDefinitions = 0;
+		for (int i = 0; i < executables.size(); ++i)
+		{
+			if (executables.at(i)->type == FUNCTION_DEFINITION)
+			{
+				functionDefinitions++;
+			}
+		}
+		cout
+			<< "Finished parsing successfully. There are "
+			<< functionDefinitions
+			<< " function(s)"
+			<< endl;
+
+
 	}
-
-	/*
-	string filename = "main.cry";
-	string filecontents = "";
-	FileIO::readFileAsUtf8(filename, &filecontents);
-	TokenStream* tokenstream = tokenize(filename, filecontents);
-
-	cout << tokenstream->length << endl;
-
-	while (tokenstream->hasMore())
-	{
-		Token* token = tokenstream->pop();
-		string value = token->value;
-		//cout << *value << endl;
-	}
-
-	XmlNode* buildFileNode = parseXmlDocument("Test.build", "build");
-
-	XmlNode* targetNode = buildFileNode->getValue("target");
-	//cout << buildFileNode->getValue("target")->getValue("platform")->getStringValue() << endl;
-
-	BuildContext buildContext = BuildContext();
-	//cout << "WAT" << endl;
-	populateBuildContext(buildFileNode, "windows", &buildContext);
-
-	cout << "Project ID: " << buildContext.projectId << endl;
-	cout << "Source: " << buildContext.source << endl;
-	cout << "Output: " << buildContext.output << endl;
-	cout << "JS File Prefix: " << buildContext.jsFilePrefix << endl;
-	cout << "Platform: " << buildContext.platform << endl;
-	cout << "JS Minify: " << buildContext.jsMinify << endl;
-
-	string path = "./";
-	vector<string> files;
-	FileIO::listDir(path, &files);
-	
-	for (unsigned int i = 0; i < files.size(); ++i)
-	{
-		string s = files.at(i);
-		cout << "File: " << s << endl;
-	}
-	//*/
 
 	return 0;
 }

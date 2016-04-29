@@ -17,7 +17,10 @@ namespace Nodes
 		ASSIGNMENT,
 		BINARY_OP_CHAIN,
 		BOOLEAN_CONSTANT,
+		CLASS_DEFINITION,
+		CONSTRUCTOR_DEFINITION,
 		EXPRESSION_AS_EXECUTABLE,
+		FIELD_DEFINITION,
 		FOR_LOOP,
 		FUNCTION_DEFINITION,
 		FUNCTION_INVOCATION,
@@ -50,14 +53,6 @@ namespace Nodes
 	class ParseNode
 	{
 	public:
-		/*
-		ParseNode()
-		{
-			static Token dummyToken = Token();
-			this->type =  UNKNOWN_NODE;
-			this->firstToken = dummyToken;
-			this->owner = NULL;
-		}//*/
 
 		ParseNode(NodeType type, Token firstToken) {
 			this->type = type;
@@ -66,6 +61,7 @@ namespace Nodes
 		NodeType type;
 		Token firstToken;
 		Executable* owner;
+
 		virtual void SetLocalIdPass() { };
 	};
 
@@ -75,6 +71,7 @@ namespace Nodes
 		Executable(NodeType type, Token firstToken)
 			: ParseNode(type, firstToken)
 		{ }
+
 		virtual void SetLocalIdPass() { };
 	};
 
@@ -84,6 +81,7 @@ namespace Nodes
 		Expression(NodeType type, Token firstToken)
 			: ParseNode(type, firstToken)
 		{ }
+
 		virtual void SetLocalIdPass() { };
 	};
 
@@ -109,6 +107,7 @@ namespace Nodes
 		Expression* valueExpression;
 		Token assignmentToken;
 		// TODO: enum for op
+
 		virtual void SetLocalIdPass();
 	};
 
@@ -141,16 +140,56 @@ namespace Nodes
 		virtual void SetLocalIdPass();
 	};
 
+	class ConstructorDefinition : public Executable
+	{
+	public:
+		ConstructorDefinition(
+			Token firstToken,
+			vector<Token> argNames,
+			vector<Expression*> argValues,
+			vector<Executable*> code)
+			: Executable(CONSTRUCTOR_DEFINITION, firstToken)
+		{
+			this->isStatic = false;
+			this->argNames = argNames;
+			this->argValues = argValues;
+			this->code = code;
+		}
+
+		bool isStatic;
+		vector<Token> argNames;
+		vector<Expression*> argValues;
+		vector<Executable*> code;
+
+		virtual void SetLocalIdPass();
+	};
+
 	class ExpressionAsExecutable : public Executable
 	{
 	public:
-		//ExpressionAsExecutable() : Executable() { }
 		ExpressionAsExecutable(Expression* expression)
 			: Executable(EXPRESSION_AS_EXECUTABLE, expression->firstToken)
 		{
 			this->expression = expression;
 		}
 		Expression* expression;
+		virtual void SetLocalIdPass();
+	};
+
+	class FieldDefinition : public Executable
+	{
+	public:
+		FieldDefinition(Token firstToken, Token nameToken, Expression* value)
+			: Executable(FIELD_DEFINITION, firstToken)
+		{
+			this->isStatic = false;
+			this->nameToken = nameToken;
+			this->defaultValue = value;
+		}
+		bool isStatic;
+		Token nameToken;
+		Expression* defaultValue;
+
 		virtual void SetLocalIdPass();
 	};
 
@@ -175,16 +214,16 @@ namespace Nodes
 		Expression* condition;
 		vector<Executable*> step;
 		vector<Executable*> code;
+
+		virtual void SetLocalIdPass();
 	};
 
 	class FunctionDefinition : public Executable
 	{
 	public:
-		//FunctionDefinition() : Executable() { }
 		FunctionDefinition(
 			Token firstToken,
 			Token functionToken,
-			bool isStatic,
 			Token nameToken,
 			vector<Token> argNames,
 			vector<Expression*> argValues,
@@ -192,7 +231,7 @@ namespace Nodes
 			: Executable(FUNCTION_DEFINITION, firstToken)
 		{
 			this->functionToken = functionToken;
-			this->isStatic = isStatic;
+			this->isStatic = false;
 			this->nameToken = nameToken;
 			this->name = nameToken.value;
 			this->argNames = argNames;
@@ -223,17 +262,19 @@ namespace Nodes
 		Expression* root;
 		Token openParen;
 		vector<Expression*> args;
+
+		virtual void SetLocalIdPass();
 	};
 
 	class IfStatement : public Executable
 	{
 	public:
-		//IfStatement() : Executable() { }
 		IfStatement(
 			Token ifToken,
 			Expression* condition,
-			vector<Executable*>* trueCode,
-			vector<Executable*>* falseCode)
+			vector<Executable*> trueCode,
+			bool hasFalseCode,
+			vector<Executable*> falseCode)
 			: Executable(IF_STATEMENT, ifToken)
 		{
 			this->condition = condition;
@@ -241,8 +282,9 @@ namespace Nodes
 			this->falseCode = falseCode;
 		}
 		Expression* condition;
-		vector<Executable*>* trueCode;
-		vector<Executable*>* falseCode;
+		vector<Executable*> trueCode;
+		bool hasFalseCode;
+		vector<Executable*> falseCode;
 		
 		virtual void SetLocalIdPass();
 	};
@@ -255,7 +297,7 @@ namespace Nodes
 			Expression* expression,
 			Token incrementToken,
 			bool isPrefix) 
-		: Expression(INLINE_INCREMENT, firstToken)
+			: Expression(INLINE_INCREMENT, firstToken)
 		{
 			this->expression = expression;
 			this->incrementToken = incrementToken;
@@ -264,46 +306,45 @@ namespace Nodes
 		Expression* expression;
 		Token incrementToken;
 		bool isPrefix;
-		
+
 		virtual void SetLocalIdPass();
 	};
 
 	class IntegerConstant : public Expression
 	{
 	public:
-		//IntegerConstant() : Expression() { }
 		IntegerConstant(Token token, int value) : Expression(INTEGER_CONSTANT, token)
 		{
 			this->value = value;
 		}
 		int value;
+
 		virtual void SetLocalIdPass();
 	};
 
 	class NullConstant : public Expression
 	{
 	public:
-		//NullConstant() : Expression() { }
 		NullConstant(Token token) : Expression(NULL_CONSTANT, token) { }
+
 		virtual void SetLocalIdPass();
 	};
 
 	class StringConstant : public Expression
 	{
 	public:
-		//StringConstant() : Expression() { }
 		StringConstant(Token token, string value) : Expression(STRING_CONSTANT, token)
 		{
 			this->value = value;
 		}
 		string value;
+
 		virtual void SetLocalIdPass();
 	};
 
 	class Ternary : public Expression
 	{
 	public:
-		//Ternary() : Expression() { }
 		Ternary(
 			Expression* condition,
 			Token questionToken,
@@ -320,18 +361,19 @@ namespace Nodes
 		Expression* trueValue;
 		Expression* falseValue;
 		Token questionToken;
+
 		virtual void SetLocalIdPass();
 	};
 
 	class Variable : public Expression
 	{
 	public:
-		//Variable() : Expression() { }
 		Variable(Token token, string name) : Expression(VARIABLE, token)
 		{
 			this->name = name;
 		}
 		string name;
+
 		virtual void SetLocalIdPass();
 	};
 }

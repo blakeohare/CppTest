@@ -20,7 +20,7 @@ namespace Tokens
 				this->value = "";
 				this->file = "";	
 			}
-			
+
 			Token(int line, int col, string value, string file)
 			{
 				this->line = line;
@@ -28,6 +28,8 @@ namespace Tokens
 				this->value = value;
 				this->file = file;
 			}
+
+			void assertValidIdentifier();
 	};
 }
 
