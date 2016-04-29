@@ -19,10 +19,8 @@ namespace Tokens
 		WORD,
 	};
 
-	TokenStream* tokenize(string filename, string contents)
+	void tokenize(string filename, string contents, TokenStream* tokens)
 	{
-		vector<Token*>* tokens = new vector<Token*>();
-
 		int length = contents.length();
 		int* lines = (int*)malloc(sizeof(int) * length);
 		int* cols = (int*)malloc(sizeof(int) * length);
@@ -123,7 +121,7 @@ namespace Tokens
 							++i;
 						}
 
-						tokens->push_back(new Token(lines[tokenStart], cols[tokenStart], tokenBuilder, filename));
+						tokens->appendToken(Token(lines[tokenStart], cols[tokenStart], tokenBuilder, filename));
 					}
 					break;
 
@@ -131,7 +129,7 @@ namespace Tokens
 					if (c == modeType)
 					{
 						tokenBuilder += c;
-						tokens->push_back(new Token(lines[tokenStart], cols[tokenStart], tokenBuilder, filename));
+						tokens->appendToken(Token(lines[tokenStart], cols[tokenStart], tokenBuilder, filename));
 						tokenBuilder = "";
 						mode = NORMAL;
 					}
@@ -175,7 +173,7 @@ namespace Tokens
 					}
 					else
 					{
-						tokens->push_back(new Token(lines[tokenStart], cols[tokenStart], tokenBuilder, filename));
+						tokens->appendToken(Token(lines[tokenStart], cols[tokenStart], tokenBuilder, filename));
 						--i;
 						tokenBuilder = "";
 						mode = NORMAL;
@@ -186,6 +184,5 @@ namespace Tokens
 
 		free(lines);
 		free(cols);
-		return new TokenStream(tokens);
 	}
 }

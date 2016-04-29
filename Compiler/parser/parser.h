@@ -9,14 +9,14 @@
 #include <vector>
 
 using namespace std;
-using namespace nodes;
+using namespace Nodes;
 using namespace Tokens;
 
-namespace parser
+namespace Parser
 {
 	vector<Executable*>* parseInterpretedCode(string rootFolder);
-	vector<Executable*>* parseExecutables(TokenStream* tokens);
-	Executable* parseExecutable(TokenStream* tokens);
+	void parseExecutables(TokenStream* tokens, vector<Executable*>* target);
+	Executable* parseExecutable(TokenStream* tokens, bool allowComplex, bool semicolonExpected);
 	Expression* parseExpression(TokenStream* tokens);
 	Executable* parseExpressionAsExecutable(TokenStream* tokens);
 }

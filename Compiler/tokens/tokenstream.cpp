@@ -9,29 +9,63 @@ using namespace std;
 
 namespace Tokens
 {
-	TokenStream::TokenStream(vector<Token*>* tokens)
+	TokenStream::TokenStream()
 	{
-		this->tokens = tokens;
+		this->tokens = vector<Token>();
 		this->index = 0;
-		this->length = tokens->size();
+		this->length = 0;
 	}
 
-	Token* TokenStream::peek()
+	void TokenStream::appendToken(Token token)
+	{
+		this->tokens.push_back(token);
+		this->length = this->tokens.size();
+	}
+
+	string TokenStream::safePeekValue()
 	{
 		if (this->index < this->length)
 		{
-			return this->tokens->at(this->index);
+			return this->tokens.at(this->index).value;
+		}
+		return "";
+	}
+
+	string TokenStream::peekValue()
+	{
+		if (this->index < this->length)
+		{
+			return this->tokens.at(this->index).value;
 		}
 		throw "EOF exception";
 	}
 
-	Token* TokenStream::pop()
+	Token TokenStream::peek()
 	{
 		if (this->index < this->length)
 		{
-			return this->tokens->at(this->index++);
+			return this->tokens.at(this->index);
 		}
 		throw "EOF exception";
+	}
+
+	Token TokenStream::pop()
+	{
+		if (this->index < this->length)
+		{
+			return this->tokens.at(this->index++);
+		}
+		throw "EOF exception";
+	}
+
+	bool TokenStream::popIfPresent(string value)
+	{
+		if (this->index < this->length && this->tokens.at(this->index).value == value)
+		{
+			this->index++;
+			return true;
+		}
+		return false;
 	}
 
 	bool TokenStream::hasMore()
@@ -43,8 +77,8 @@ namespace Tokens
 	{
 		if (this->hasMore())
 		{
-			Token* next = this->peek();
-			if (streq(next->value, value))
+			Token next = this->peek();
+			if (next.value == value)
 			{
 				return true;
 			}			
@@ -52,13 +86,13 @@ namespace Tokens
 		return false;
 	}
 
-	Token* TokenStream::popExpected(string value)
+	Token TokenStream::popExpected(string value)
 	{
-		Token* output = this->pop(); // throws EOF
-		if (!streq(output->value, value)) 
+		Token output = this->pop(); // throws EOF
+		if (output.value != value) 
 		{
 			std::stringstream msgStream;
-			msgStream << "Expected: '" << value << "' but found '" << output->value << "'";
+			msgStream << "Expected: '" << value << "' but found '" << output.value << "'";
 			string msg = msgStream.str();
 			throw msg;
 		}

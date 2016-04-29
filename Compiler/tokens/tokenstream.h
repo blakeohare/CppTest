@@ -14,15 +14,19 @@ namespace Tokens
 		public:
 			int index;
 			int length;
-			vector<Token*>* tokens;
+			vector<Token> tokens;
 
-			Token* peek();
-			Token* pop();
+			void appendToken(Token token);
+			Token peek();
+			string peekValue();
+			string safePeekValue();
+			Token pop();
 			bool hasMore();
 			bool isNext(string value);
-			Token* popExpected(string value);
+			Token popExpected(string value);
+			bool popIfPresent(string value);
 
-			TokenStream(vector<Token*>* tokens);
+			TokenStream();
 	};
 }
 #endif

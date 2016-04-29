@@ -26,6 +26,16 @@ XmlNode* XmlNode::getValue(string key)
 	return this->values->at(key)->at(0);
 }
 
+string XmlNode::getStringValue(string key)
+{
+	XmlNode* node = this->getValue(key);
+	if (node != NULL)
+	{
+		return node->getStringValue();
+	}
+	return "";
+}
+
 vector<XmlNode*>* XmlNode::getValues(string key)
 {
 	if (this->values == NULL) return NULL;

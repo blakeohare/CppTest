@@ -15,6 +15,7 @@ public:
 	void setStringValue(string value);
 	void setValue(string key, XmlNode* value);
 	string getStringValue();
+	string getStringValue(string key);
 	XmlNode* getValue(string key);
 	vector<XmlNode*>* getValues(string key);
 private:
