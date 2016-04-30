@@ -14,6 +14,7 @@ namespace Tokens
 			int col;
 			string value;
 			string file;
+			
 			Token() {
 				this->line = 0;
 				this->col = 0;

@@ -19,6 +19,7 @@ namespace Nodes
 		BOOLEAN_CONSTANT,
 		CLASS_DEFINITION,
 		CONSTRUCTOR_DEFINITION,
+		DICTIONARY,
 		EXPRESSION_AS_EXECUTABLE,
 		FIELD_DEFINITION,
 		FOR_LOOP,
@@ -147,19 +148,41 @@ namespace Nodes
 			Token firstToken,
 			vector<Token> argNames,
 			vector<Expression*> argValues,
+			vector<Expression*> baseArgs,
 			vector<Executable*> code)
 			: Executable(CONSTRUCTOR_DEFINITION, firstToken)
 		{
 			this->isStatic = false;
 			this->argNames = argNames;
 			this->argValues = argValues;
+			this->baseArgs = baseArgs;
 			this->code = code;
 		}
 
 		bool isStatic;
 		vector<Token> argNames;
 		vector<Expression*> argValues;
+		vector<Expression*> baseArgs;
 		vector<Executable*> code;
+
+		virtual void SetLocalIdPass();
+	};
+
+	class Dictionary : public Expression
+	{
+	public:
+		Dictionary(
+			Token firstToken,
+			vector<Expression*> keys,
+			vector<Expression*> values)
+			: Expression(DICTIONARY, firstToken)
+		{
+			this->keys = keys;
+			this->values = values;
+		}
+
+		vector<Expression*> keys;
+		vector<Expression*> values;
 
 		virtual void SetLocalIdPass();
 	};

@@ -1,7 +1,7 @@
 #include <string>
 
 #include "token.h"
-#include "../parser/parser.h"
+#include "../parser/exceptions.h"
 
 using namespace std;
 
@@ -35,7 +35,7 @@ namespace Tokens
 		// TODO: lookup table of reserved keywords.
 		if (!valid)
 		{
-			throw new Parser::ParserException(*this, "Valid identifier expected.");
+			throw new ParserException(*this, "Valid identifier expected.");
 		}
 	}
 }
