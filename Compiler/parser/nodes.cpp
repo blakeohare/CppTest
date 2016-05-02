@@ -9,8 +9,11 @@ using namespace Nodes;
 void Nodes::Assignment::SetLocalIdPass() { }
 void Nodes::BinaryOpChain::SetLocalIdPass() { }
 void Nodes::BooleanConstant::SetLocalIdPass() { }
+void Nodes::BracketIndex::SetLocalIdPass() { }
+void Nodes::BracketSlice::SetLocalIdPass() { }
 void Nodes::ConstructorDefinition::SetLocalIdPass() { }
 void Nodes::Dictionary::SetLocalIdPass() { }
+void Nodes::DotField::SetLocalIdPass() { }
 void Nodes::ExpressionAsExecutable::SetLocalIdPass() { }
 void Nodes::FieldDefinition::SetLocalIdPass() { }
 void Nodes::ForLoop::SetLocalIdPass() { }

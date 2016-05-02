@@ -17,9 +17,12 @@ namespace Nodes
 		ASSIGNMENT,
 		BINARY_OP_CHAIN,
 		BOOLEAN_CONSTANT,
+		BRACKET_INDEX,
+		BRACKET_SLICE,
 		CLASS_DEFINITION,
 		CONSTRUCTOR_DEFINITION,
 		DICTIONARY,
+		DOT_FIELD,
 		EXPRESSION_AS_EXECUTABLE,
 		FIELD_DEFINITION,
 		FOR_LOOP,
@@ -141,6 +144,92 @@ namespace Nodes
 		virtual void SetLocalIdPass();
 	};
 
+	class BracketIndex : public Expression
+	{
+	public:
+		BracketIndex(Expression* root, Token bracketToken, Expression* index)
+			: Expression(BRACKET_INDEX, root->firstToken)
+		{
+			this->root = root;
+			this->bracketToken = bracketToken;
+			this->index = index;
+		}
+
+		Expression* root;
+		Expression* index;
+		Token bracketToken;
+
+		virtual void SetLocalIdPass();
+	};
+
+	class BracketSlice : public Expression
+	{
+	public:
+		BracketSlice(
+			Expression* root,
+			Token bracketToken,
+			Expression* start,
+			Expression* end,
+			Expression* step)
+			: Expression(BRACKET_SLICE, root->firstToken)
+		{
+			this->root = root;
+			this->bracketToken = bracketToken;
+			this->start = start;
+			this->end = end;
+			this->step = step;
+		}
+
+		Expression* root;
+		Expression* start;
+		Expression* end;
+		Expression* step;
+		Token bracketToken;
+
+		virtual void SetLocalIdPass();
+	};
+
+	class ClassDefinition : public Executable
+	{
+	public:
+		ClassDefinition(
+			Token classToken,
+			Token nameToken,
+			vector<Token> baseClassTokens,
+			Executable* staticConstructor,
+			vector<Executable*> staticFields,
+			vector<Executable*> staticMethods,
+			Executable* instanceConstructor,
+			vector<Executable*> instanceFields,
+			vector<Executable*> instanceMethods)
+			: Executable(CLASS_DEFINITION, classToken)
+		{
+			// TODO: other modifiers like abstract, final, and static
+			this->classToken = classToken;
+			this->nameToken = nameToken;
+			this->name = nameToken.value;
+			this->baseClassTokens = baseClassTokens;
+			this->staticConstructor = staticConstructor;
+			this->staticFieldDefinitions = staticFields;
+			this->staticMethodDefinitions = staticMethods;
+			this->instanceConstructor = instanceConstructor;
+			this->instanceFieldDefinitions = instanceFields;
+			this->instanceMethodDefinitions = instanceMethods;
+		}
+
+		Token firstToken;
+		Token classToken;
+		Token nameToken;
+		string name;
+		vector<Token> baseClassTokens;
+		Executable* staticConstructor;
+		vector<Executable*> staticFieldDefinitions;
+		vector<Executable*> staticMethodDefinitions;
+		Executable* instanceConstructor;
+		vector<Executable*> instanceFieldDefinitions;
+		vector<Executable*> instanceMethodDefinitions;
+	};
+
 	class ConstructorDefinition : public Executable
 	{
 	public:
@@ -183,6 +272,24 @@ namespace Nodes
 
 		vector<Expression*> keys;
 		vector<Expression*> values;
+
+		virtual void SetLocalIdPass();
+	};
+
+	class DotField : public Expression
+	{
+	public:
+		DotField(Expression* root, Token dotToken, Token fieldNameToken)
+			: Expression(DOT_FIELD, root->firstToken)
+		{
+			this->root = root;
+			this->dotToken = dotToken;
+			this->fieldNameToken = fieldNameToken;
+		}
+
+		Expression* root;
+		Token dotToken;
+		Token fieldNameToken;
 
 		virtual void SetLocalIdPass();
 	};

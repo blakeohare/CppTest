@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include <sstream>
+
 #include "exceptions.h"
 #include "executableparser.h"
 #include "expressionparser.h"
@@ -29,8 +31,8 @@ namespace Parser
 	{
 		vector<Executable*> instanceFields = vector<Executable*>();
 		vector<Executable*> staticFields = vector<Executable*>();
-		vector<Executable*> instanceFunctions = vector<Executable*>();
-		vector<Executable*> staticFunctions = vector<Executable*>();
+		vector<Executable*> instanceMethods = vector<Executable*>();
+		vector<Executable*> staticMethods = vector<Executable*>();
 		Executable* staticConstructor = NULL;
 		Executable* instanceConstructor = NULL;
 		vector<Token> baseClasses = vector<Token>();
@@ -71,6 +73,11 @@ namespace Parser
 				{
 					functionDefinition->isStatic = true;
 					functionDefinition->firstToken = staticToken;
+					staticMethods.push_back(functionDefinition);
+				}
+				else
+				{
+					instanceMethods.push_back(functionDefinition);
 				}
 			}
 			else if (next == "field")
@@ -80,6 +87,11 @@ namespace Parser
 				{
 					field->isStatic = true;
 					field->firstToken = staticToken;
+					staticFields.push_back(field);
+				}
+				else
+				{
+					instanceFields.push_back(field);
 				}
 			}
 			else if (next == "constructor")
@@ -96,6 +108,17 @@ namespace Parser
 				}
 				ConstructorDefinition* constructor =
 					(ConstructorDefinition*) parseConstructor(tokens);
+				if (isStatic)
+				{
+					if (constructor->baseArgs.size() > 0)
+						throw new ParserException(constructor->firstToken,
+							"Static constructor cannot invoke a base constructor.");
+					staticConstructor = constructor;
+				}
+				else
+				{
+					instanceConstructor = constructor;
+				}
 			}
 			else
 			{
@@ -103,7 +126,16 @@ namespace Parser
 			}
 		}
 
-		throw new ParserException("Class parsing not implemented.");
+		return new ClassDefinition(
+			classToken,
+			nameToken,
+			baseClasses,
+			staticConstructor,
+			staticFields,
+			staticMethods,
+			instanceConstructor,
+			instanceFields,
+			instanceMethods);
 	}
 
 	vector<Executable*> parseCodeBlock(TokenStream* tokens, bool bracketsRequired)
@@ -190,6 +222,9 @@ namespace Parser
 			next = tokens->peekValue();
 			if (next[next.size() - 1] == '=')
 			{
+				stringstream s;
+				s << tokens->peek().line;
+
 				// It's an assignment
 				Token assignmentToken = tokens->pop();
 				Expression* assignmentValue = parseExpression(tokens);

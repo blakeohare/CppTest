@@ -24,7 +24,8 @@ namespace Parser
 
 	Expression* parseExpression(TokenStream* tokens)
 	{
-		return parseTernary(tokens);
+		Expression* output = parseTernary(tokens);
+		return output;
 	}
 
 	Expression* parseTernary(TokenStream* tokens)
@@ -101,11 +102,60 @@ namespace Parser
 		{
 			if (next == ".")
 			{
-				throw new ParserException(tokens->pop(), "dot step not implemented");
+				Token dotToken = tokens->pop();
+				Token fieldNameToken = tokens->pop();
+				fieldNameToken.assertValidIdentifier();
+				return new DotField(expression, dotToken, fieldNameToken);
 			}
 			else if (next == "[")
 			{
-				throw new ParserException(tokens->pop(), "bracket not implemented");
+				Token openBracket = tokens->pop();
+				vector<Expression*> indices = vector<Expression*>();
+				bool nextAllowed = true;
+				while (!tokens->popIfPresent("]"))
+				{
+					if (tokens->popIfPresent(":"))
+					{
+						nextAllowed = true;
+						indices.push_back(NULL);
+					}
+					else
+					{
+						Expression* index = parseExpression(tokens);
+						nextAllowed = tokens->popIfPresent(":");
+						indices.push_back(index);
+					}
+				}
+
+				if (nextAllowed)
+				{
+					indices.push_back(NULL);
+				}
+
+				if (indices.size() > 3)
+				{
+					throw new ParserException(openBracket, 
+						"Too many expressions in this slice expression.");
+				}
+
+				if (indices.size() == 1)
+				{
+					if (indices.at(0) == NULL)
+					{
+						throw new ParserException(openBracket, "Need an index expression here.");
+					}
+					expression = new BracketIndex(expression, openBracket, indices.at(0));
+				}
+				else if (indices.size() == 2)
+				{
+					expression = new BracketSlice(
+						expression, openBracket, indices.at(0), indices.at(1), NULL);
+				}
+				else
+				{
+					expression = new BracketSlice(
+						expression, openBracket, indices.at(0), indices.at(1), indices.at(2));
+				}
 			}
 			else if (next == "(")
 			{
@@ -123,9 +173,9 @@ namespace Parser
 				expression = new FunctionInvocation(expression, openParen, args);
 				next = tokens->safePeekValue();
 			}
+			next = tokens->safePeekValue();
 		}
 
-		next = tokens->safePeekValue();
 		if (next == "++" || next == "--")
 		{
 			suffixToken = tokens->pop();

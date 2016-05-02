@@ -69,13 +69,6 @@ int main(const int argc, const char** argv)
 				functionDefinitions++;
 			}
 		}
-		cout
-			<< "Finished parsing successfully. There are "
-			<< functionDefinitions
-			<< " function(s)"
-			<< endl;
-
-
 	}
 
 	return 0;
