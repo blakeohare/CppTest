@@ -1,6 +1,7 @@
 #ifndef EXECUTABLEPARSER_H
 #define EXECUTABLEPARSER_H
 
+#include "filecontext.h"
 #include "nodes.h"
 #include "../tokens/tokenstream.h"
 #include "../tokens/token.h"
@@ -15,11 +16,10 @@ using namespace Tokens;
 
 namespace Parser
 {
-	vector<Executable*>* parseInterpretedCode(string rootFolder);
-	void parseExecutables(TokenStream* tokens, vector<Executable*>* target);
-	Executable* parseExecutable(TokenStream* tokens, bool allowComplex, bool semicolonExpected);
-	Expression* parseExpression(TokenStream* tokens);
-	Executable* parseExpressionAsExecutable(TokenStream* tokens);
+	void parseExecutables(TokenStream* tokens, vector<Executable*>* target, FileContext* fileContext);
+	Executable* parseExecutable(TokenStream* tokens, FileContext* fileContext, bool allowComplex, bool semicolonExpected);
+	//Expression* parseExpression(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseExpressionAsExecutable(TokenStream* tokens, FileContext* fileContext);
 }
 
 #endif

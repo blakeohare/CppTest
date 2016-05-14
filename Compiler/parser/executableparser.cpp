@@ -8,6 +8,7 @@
 #include "exceptions.h"
 #include "executableparser.h"
 #include "expressionparser.h"
+#include "filecontext.h"
 #include "nodes.h"
 #include "../tokens/token.h"
 #include "../tokens/tokenstream.h"
@@ -20,14 +21,17 @@ using namespace Parser;
 
 namespace Parser
 {
-	Executable* parseClass(TokenStream* tokens);
-	Executable* parseConstructor(TokenStream* tokens);
-	Executable* parseField(TokenStream* tokens);
-	Executable* parseForLoop(TokenStream* tokens);
-	Executable* parseFunction(TokenStream* tokens);
-	Executable* parseIf(TokenStream* tokens);
+	Executable* parseClass(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseConstructor(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseField(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseForLoop(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseFunction(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseIf(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseImport(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseNamespace(TokenStream* tokens, FileContext* fileContext);
+	Executable* parseReturn(TokenStream* tokens, FileContext* fileContext);
 
-	Executable* parseClass(TokenStream* tokens)
+	Executable* parseClass(TokenStream* tokens, FileContext* fileContext)
 	{
 		vector<Executable*> instanceFields = vector<Executable*>();
 		vector<Executable*> staticFields = vector<Executable*>();
@@ -68,7 +72,7 @@ namespace Parser
 			if (next == "function")
 			{
 				FunctionDefinition* functionDefinition =
-					(FunctionDefinition*) parseFunction(tokens);
+					(FunctionDefinition*) parseFunction(tokens, fileContext);
 				if (isStatic)
 				{
 					functionDefinition->isStatic = true;
@@ -82,7 +86,7 @@ namespace Parser
 			}
 			else if (next == "field")
 			{
-				FieldDefinition* field = (FieldDefinition*) parseField(tokens);
+				FieldDefinition* field = (FieldDefinition*) parseField(tokens, fileContext);
 				if (isStatic)
 				{
 					field->isStatic = true;
@@ -107,7 +111,7 @@ namespace Parser
 						"Classes cannot have multiple constructors.");
 				}
 				ConstructorDefinition* constructor =
-					(ConstructorDefinition*) parseConstructor(tokens);
+					(ConstructorDefinition*) parseConstructor(tokens, fileContext);
 				if (isStatic)
 				{
 					if (constructor->baseArgs.size() > 0)
@@ -135,10 +139,11 @@ namespace Parser
 			staticMethods,
 			instanceConstructor,
 			instanceFields,
-			instanceMethods);
+			instanceMethods,
+			fileContext);
 	}
 
-	vector<Executable*> parseCodeBlock(TokenStream* tokens, bool bracketsRequired)
+	vector<Executable*> parseCodeBlock(TokenStream* tokens, FileContext* fileContext, bool bracketsRequired)
 	{
 		vector<Executable*> output = vector<Executable*>();
 		bool bracketsPresent = bracketsRequired || (tokens->safePeekValue() == "{");
@@ -147,17 +152,17 @@ namespace Parser
 			tokens->popExpected("{");
 			while (!tokens->popIfPresent("}"))
 			{
-				output.push_back(parseExecutable(tokens, true, true));
+				output.push_back(parseExecutable(tokens, fileContext, true, true));
 			}
 		}
 		else
 		{
-			output.push_back(parseExecutable(tokens, true, true));
+			output.push_back(parseExecutable(tokens, fileContext, true, true));
 		}
 		return output;
 	}
 
-	Executable* parseConstructor(TokenStream* tokens)
+	Executable* parseConstructor(TokenStream* tokens, FileContext* fileContext)
 	{
 		Token constructorToken = tokens->popExpected("constructor");
 		tokens->popExpected("(");
@@ -176,7 +181,7 @@ namespace Parser
 			Expression* argValue = NULL;
 			if (tokens->popIfPresent("="))
 			{
-				argValue = parseExpression(tokens);
+				argValue = parseExpression(tokens, fileContext);
 			}
 			argValues.push_back(argValue);
 		}
@@ -191,32 +196,34 @@ namespace Parser
 				{
 					tokens->popExpected(",");
 				}
-				baseArgs.push_back(parseExpression(tokens));
+				baseArgs.push_back(parseExpression(tokens, fileContext));
 			}
 		}
 
-		vector<Executable*> code = parseCodeBlock(tokens, true);
+		vector<Executable*> code = parseCodeBlock(tokens, fileContext, true);
 
-		return new ConstructorDefinition(constructorToken, argNames, argValues, baseArgs, code);
+		return new ConstructorDefinition(constructorToken, argNames, argValues, baseArgs, code, fileContext);
 	}
 
-	Executable* parseExecutable(TokenStream* tokens, bool allowComplex, bool semicolonExpected)
+	Executable* parseExecutable(
+		TokenStream* tokens, 
+		FileContext* fileContext,
+		bool allowComplex,
+		bool semicolonExpected)
 	{
 		string next = tokens->peekValue();
 		if (allowComplex)
 		{
-			if (next == "class") return parseClass(tokens);
-			if (next == "for") return parseForLoop(tokens);
-			if (next == "function") return parseFunction(tokens);
-			if (next == "if") return parseIf(tokens);
-
-			if (next == "return")
-			{
-				throw new ParserException(tokens->pop(), "Return not implemented yet.");
-			}
+			if (next == "import") return parseImport(tokens, fileContext);
+			if (next == "class") return parseClass(tokens, fileContext);
+			if (next == "for") return parseForLoop(tokens, fileContext);
+			if (next == "function") return parseFunction(tokens, fileContext);
+			if (next == "if") return parseIf(tokens, fileContext);
+			if (next == "namespace") return parseNamespace(tokens, fileContext);
+			if (next == "return") return parseReturn(tokens, fileContext);
 		}
 
-		Expression* expression = parseExpression(tokens);
+		Expression* expression = parseExpression(tokens, fileContext);
 		if (tokens->hasMore())
 		{
 			next = tokens->peekValue();
@@ -227,12 +234,12 @@ namespace Parser
 
 				// It's an assignment
 				Token assignmentToken = tokens->pop();
-				Expression* assignmentValue = parseExpression(tokens);
+				Expression* assignmentValue = parseExpression(tokens, fileContext);
 				if (semicolonExpected)
 				{
 					tokens->popExpected(";");
 				}
-				return new Assignment(expression, assignmentToken, assignmentValue);
+				return new Assignment(expression, assignmentToken, assignmentValue, fileContext);
 			}
 		}
 
@@ -246,19 +253,19 @@ namespace Parser
 		{
 			tokens->popExpected(";");
 		}
-		return new ExpressionAsExecutable(expression);
+		return new ExpressionAsExecutable(expression, fileContext);
 	}
 
-	void parseExecutables(TokenStream* tokens, vector<Executable*>* target)
+	void parseExecutables(TokenStream* tokens, vector<Executable*>* target, FileContext* fileContext)
 	{
 		while (tokens->hasMore())
 		{
-			Executable* executable = parseExecutable(tokens, true, true);
+			Executable* executable = parseExecutable(tokens, fileContext, true, true);
 			target->push_back(executable);
 		}
 	}
 
-	Executable* parseField(TokenStream* tokens)
+	Executable* parseField(TokenStream* tokens, FileContext* fileContext)
 	{
 		Token fieldToken = tokens->popExpected("field");
 		Token nameToken = tokens->pop();
@@ -266,13 +273,13 @@ namespace Parser
 		Expression* defaultValue = NULL;
 		if (tokens->popIfPresent("="))
 		{
-			defaultValue = parseExpression(tokens);
+			defaultValue = parseExpression(tokens, fileContext);
 		}
 		tokens->popExpected(";");
-		return new FieldDefinition(fieldToken, nameToken, defaultValue);
+		return new FieldDefinition(fieldToken, nameToken, defaultValue, fileContext);
 	}
 
-	Executable* parseForLoop(TokenStream* tokens)
+	Executable* parseForLoop(TokenStream* tokens, FileContext* fileContext)
 	{
 		Token forToken = tokens->pop();
 		tokens->popExpected("(");
@@ -287,13 +294,13 @@ namespace Parser
 				{
 					tokens->popExpected(",");
 				}
-				init.push_back(parseExecutable(tokens, false, false));
+				init.push_back(parseExecutable(tokens, fileContext, false, false));
 			}
 		}
 
 		if (!tokens->popIfPresent(";"))
 		{
-			condition = parseExpression(tokens);
+			condition = parseExpression(tokens, fileContext);
 			tokens->popExpected(";");
 		}
 
@@ -303,15 +310,15 @@ namespace Parser
 			{
 				tokens->popExpected(",");
 			}
-			step.push_back(parseExecutable(tokens, false, false));
+			step.push_back(parseExecutable(tokens, fileContext, false, false));
 		}
 
-		vector<Executable*> code = parseCodeBlock(tokens, false);
+		vector<Executable*> code = parseCodeBlock(tokens, fileContext, false);
 
-		return new ForLoop(forToken, init, condition, step, code);
+		return new ForLoop(forToken, init, condition, step, code, fileContext);
 	}
 
-	Executable* parseFunction(TokenStream* tokens)
+	Executable* parseFunction(TokenStream* tokens, FileContext* fileContext)
 	{
 		Token functionToken = tokens->popExpected("function");
 		Token nameToken = tokens->pop();
@@ -330,42 +337,78 @@ namespace Parser
 			// TODO: verify valid identifier
 			if (tokens->popIfPresent("="))
 			{
-				argValue = parseExpression(tokens);
+				argValue = parseExpression(tokens, fileContext);
 			}
 			argNames.push_back(argName);
 			argValues.push_back(argValue);
 		}
-		vector<Executable*> body = parseCodeBlock(tokens, true);
+		vector<Executable*> body = parseCodeBlock(tokens, fileContext, true);
 
-		FunctionDefinition* functionDefinition = new FunctionDefinition(
+		return new FunctionDefinition(
 			functionToken,
 			functionToken,
 			nameToken,
 			argNames,
 			argValues,
-			body);
-
-		return functionDefinition;
+			body,
+			fileContext);
 	}
 
-	Executable* parseIf(TokenStream* tokens)
+	Executable* parseIf(TokenStream* tokens, FileContext* fileContext)
 	{
 		Token ifToken = tokens->popExpected("if");
 		tokens->popExpected("(");
-		Expression* condition = parseExpression(tokens);
+		Expression* condition = parseExpression(tokens, fileContext);
 		tokens->popExpected(")");
-		vector<Executable*> trueCode = parseCodeBlock(tokens, false);
+		vector<Executable*> trueCode = parseCodeBlock(tokens, fileContext, false);
 		vector<Executable*> falseCode;
 		bool hasFalseCode = tokens->popIfPresent("else");
 		if (hasFalseCode)
 		{
-			falseCode = parseCodeBlock(tokens, false);
+			falseCode = parseCodeBlock(tokens, fileContext, false);
 		}
-		return new IfStatement(ifToken, condition, trueCode, hasFalseCode, falseCode);
+		return new IfStatement(ifToken, condition, trueCode, hasFalseCode, falseCode, fileContext);
 	}
 
-	vector<Executable*>* parseInterpretedCode(string rootFolder)
+	Executable* parseImport(TokenStream* tokens, FileContext* fileContext)
 	{
-		return NULL;
+		Token importToken = tokens->popExpected("import");
+		vector<string> names = vector<string>();
+		Token nameToken = tokens->pop();
+		nameToken.assertValidIdentifier();
+		names.push_back(nameToken.value);
+		while (tokens->popIfPresent("."))
+		{
+			nameToken = tokens->pop();
+			nameToken.assertValidIdentifier();
+			names.push_back(nameToken.value);
+		}
+		tokens->popExpected(";");
+
+		// Add ImportStatement to fileContext only in the top level to ensure that it
+		// is imported correctly at the root, at the top of the file, rather than adding
+		// it here. Note that in translated code, imports can occur anywhere in the file
+		// and mean something different.
+		return new ImportStatement(importToken, names, fileContext);
+	}
+
+	Executable* parseNamespace(TokenStream* tokens, FileContext* fileContext)
+	{
+		Token namespaceToken = tokens->popExpected("namespace");
+		Token nameToken = tokens->pop();
+		nameToken.assertValidIdentifier();
+		vector<Executable*> members = vector<Executable*>();
+		tokens->popExpected("{");
+		while (!tokens->popIfPresent("}"))
+		{
+			Executable* member = parseExecutable(tokens, fileContext, true, true);
+			members.push_back(member);
+		}
+		return new Namespace(namespaceToken, nameToken, members, fileContext);
+	}
+
+	Executable* parseReturn(TokenStream* tokens, FileContext* fileContext)
+	{
+		throw new ParserException(tokens->pop(), "Parse return isn't implemented yet.");
 	}
 }

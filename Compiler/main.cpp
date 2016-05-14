@@ -5,8 +5,10 @@
 #include <vector>
 
 #include "build/buildcontext.h"
+#include "parser/filecontext.h"
 #include "parser/nodes.h"
 #include "parser/executableparser.h"
+#include "resolver/resolver.h"
 #include "tokens/tokenizer.h"
 #include "tokens/token.h"
 #include "tokens/tokenstream.h"
@@ -19,7 +21,7 @@ using namespace Nodes;
 
 int main(const int argc, const char** argv)
 {
-	// crayon
+	// $ crayon
 	if (argc == 1) 
 	{
 		cout << "Crayon 0.2.1" << endl;
@@ -34,7 +36,7 @@ int main(const int argc, const char** argv)
 		return 0;
 	}
 
-	// crayon build_file -target id
+	// $ crayon build_file -target target_id
 	if (argc == 4 && strcmp(argv[2], "-target") == 0)
 	{
 		string buildFilePath = string(argv[1]);
@@ -54,21 +56,15 @@ int main(const int argc, const char** argv)
 			cout << "File: " << files.at(i) << endl;
 			string fullFilePath = "./" + sourceRelativePath + files.at(i);
 			cout << "Full path: " << fullFilePath << endl;
+			FileContext* fileContext = new FileContext(fullFilePath);
 			string contents = FileIO::readFileAsUtf8(fullFilePath);
 			TokenStream tokens = TokenStream();
 			cout << "Contents: " << endl << contents << endl;
 			Tokens::tokenize(files.at(i), contents, &tokens);
-			Parser::parseExecutables(&tokens, &executables);
+			Parser::parseExecutables(&tokens, &executables, fileContext);
 		}
 
-		int functionDefinitions = 0;
-		for (int i = 0; i < executables.size(); ++i)
-		{
-			if (executables.at(i)->type == FUNCTION_DEFINITION)
-			{
-				functionDefinitions++;
-			}
-		}
+		Resolver::resolveCode(executables);
 	}
 
 	return 0;

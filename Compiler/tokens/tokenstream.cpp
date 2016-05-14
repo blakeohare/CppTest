@@ -1,6 +1,7 @@
 #include <vector>
 #include <sstream>
 
+#include "../parser/exceptions.h"
 #include "tokenstream.h"
 #include "token.h"
 #include "../util/util.h"
@@ -37,7 +38,7 @@ namespace Tokens
 		{
 			return this->tokens.at(this->index).value;
 		}
-		throw "EOF exception";
+		throw new ParserException("EOF exception");
 	}
 
 	Token TokenStream::peek()
@@ -46,7 +47,7 @@ namespace Tokens
 		{
 			return this->tokens.at(this->index);
 		}
-		throw "EOF exception";
+		throw new ParserException("EOF exception");
 	}
 
 	Token TokenStream::pop()
@@ -55,7 +56,7 @@ namespace Tokens
 		{
 			return this->tokens.at(this->index++);
 		}
-		throw "EOF exception";
+		throw new ParserException("EOF exception");
 	}
 
 	bool TokenStream::popIfPresent(string value)
@@ -94,7 +95,7 @@ namespace Tokens
 			std::stringstream msgStream;
 			msgStream << "Expected: '" << value << "' but found '" << output.value << "'";
 			string msg = msgStream.str();
-			throw msg;
+			throw ParserException(output, msg);
 		}
 		return output;
 	}

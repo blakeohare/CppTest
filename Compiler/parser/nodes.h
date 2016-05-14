@@ -1,15 +1,19 @@
 #ifndef NODES_H
 #define NODES_H
 
+#include <unordered_map>
 #include <vector>
 
+#include "../parser/filecontext.h"
 #include "../tokens/token.h"
 
 using namespace std;
 using namespace Tokens;
 
+class FileContext;
 namespace Nodes
 {
+
 	enum NodeType
 	{
 		UNKNOWN_NODE,
@@ -29,8 +33,10 @@ namespace Nodes
 		FUNCTION_DEFINITION,
 		FUNCTION_INVOCATION,
 		IF_STATEMENT,
+		IMPORT_STATEMENT,
 		INLINE_INCREMENT,
 		INTEGER_CONSTANT,
+		NAMESPACE,
 		NULL_CONSTANT,
 		STRING_CONSTANT,
 		TERNARY,
@@ -58,13 +64,15 @@ namespace Nodes
 	{
 	public:
 
-		ParseNode(NodeType type, Token firstToken) {
+		ParseNode(NodeType type, Token firstToken, FileContext* fileContext) {
 			this->type = type;
 			this->firstToken = firstToken;
+			this->fileContext = fileContext;
 		}
 		NodeType type;
 		Token firstToken;
 		Executable* owner;
+		FileContext* fileContext;
 
 		virtual void SetLocalIdPass() { };
 	};
@@ -72,21 +80,23 @@ namespace Nodes
 	class Executable : public ParseNode
 	{
 	public:
-		Executable(NodeType type, Token firstToken)
-			: ParseNode(type, firstToken)
+		Executable(NodeType type, Token firstToken, FileContext* fileContext)
+			: ParseNode(type, firstToken, fileContext)
 		{ }
 
 		virtual void SetLocalIdPass() { };
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup) { return this; };
 	};
 
 	class Expression : public ParseNode
 	{
 	public:
-		Expression(NodeType type, Token firstToken)
-			: ParseNode(type, firstToken)
+		Expression(NodeType type, Token firstToken, FileContext* fileContext)
+			: ParseNode(type, firstToken, fileContext)
 		{ }
 
 		virtual void SetLocalIdPass() { };
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup) { return this; };
 	};
 
 	////////////////////////////////////////////////////////
@@ -100,8 +110,9 @@ namespace Nodes
 		Assignment(
 			Expression* targetExpression,
 			Token assignmentToken,
-			Expression* valueExpression)
-			: Executable(ASSIGNMENT, targetExpression->firstToken)
+			Expression* valueExpression,
+			FileContext* fileContext)
+			: Executable(ASSIGNMENT, targetExpression->firstToken, fileContext)
 		{
 			this->targetExpression = targetExpression;
 			this->assignmentToken = assignmentToken;
@@ -113,13 +124,14 @@ namespace Nodes
 		// TODO: enum for op
 
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class BinaryOpChain : public Expression
 	{
 	public:
-		BinaryOpChain(vector<Expression*> expressions, vector<Token> ops)
-			: Expression(BINARY_OP_CHAIN, expressions.at(0)->firstToken)
+		BinaryOpChain(vector<Expression*> expressions, vector<Token> ops, FileContext* fileContext)
+			: Expression(BINARY_OP_CHAIN, expressions.at(0)->firstToken, fileContext)
 		{
 			this->expressions = expressions;
 			this->ops = ops;
@@ -128,13 +140,14 @@ namespace Nodes
 		vector<Token> ops;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class BooleanConstant : public Expression
 	{
 	public:
-		BooleanConstant(Token token, bool value)
-			: Expression(BOOLEAN_CONSTANT, token)
+		BooleanConstant(Token token, bool value, FileContext* fileContext)
+			: Expression(BOOLEAN_CONSTANT, token, fileContext)
 		{
 			this->value = value;
 		}
@@ -147,8 +160,8 @@ namespace Nodes
 	class BracketIndex : public Expression
 	{
 	public:
-		BracketIndex(Expression* root, Token bracketToken, Expression* index)
-			: Expression(BRACKET_INDEX, root->firstToken)
+		BracketIndex(Expression* root, Token bracketToken, Expression* index, FileContext* fileContext)
+			: Expression(BRACKET_INDEX, root->firstToken, fileContext)
 		{
 			this->root = root;
 			this->bracketToken = bracketToken;
@@ -160,6 +173,7 @@ namespace Nodes
 		Token bracketToken;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class BracketSlice : public Expression
@@ -170,8 +184,9 @@ namespace Nodes
 			Token bracketToken,
 			Expression* start,
 			Expression* end,
-			Expression* step)
-			: Expression(BRACKET_SLICE, root->firstToken)
+			Expression* step,
+			FileContext* fileContext)
+			: Expression(BRACKET_SLICE, root->firstToken, fileContext)
 		{
 			this->root = root;
 			this->bracketToken = bracketToken;
@@ -187,6 +202,7 @@ namespace Nodes
 		Token bracketToken;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class ClassDefinition : public Executable
@@ -201,8 +217,9 @@ namespace Nodes
 			vector<Executable*> staticMethods,
 			Executable* instanceConstructor,
 			vector<Executable*> instanceFields,
-			vector<Executable*> instanceMethods)
-			: Executable(CLASS_DEFINITION, classToken)
+			vector<Executable*> instanceMethods,
+			FileContext* fileContext)
+			: Executable(CLASS_DEFINITION, classToken, fileContext)
 		{
 			// TODO: other modifiers like abstract, final, and static
 			this->classToken = classToken;
@@ -228,6 +245,8 @@ namespace Nodes
 		Executable* instanceConstructor;
 		vector<Executable*> instanceFieldDefinitions;
 		vector<Executable*> instanceMethodDefinitions;
+
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class ConstructorDefinition : public Executable
@@ -238,8 +257,9 @@ namespace Nodes
 			vector<Token> argNames,
 			vector<Expression*> argValues,
 			vector<Expression*> baseArgs,
-			vector<Executable*> code)
-			: Executable(CONSTRUCTOR_DEFINITION, firstToken)
+			vector<Executable*> code,
+			FileContext* fileContext)
+			: Executable(CONSTRUCTOR_DEFINITION, firstToken, fileContext)
 		{
 			this->isStatic = false;
 			this->argNames = argNames;
@@ -255,6 +275,7 @@ namespace Nodes
 		vector<Executable*> code;
 
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class Dictionary : public Expression
@@ -263,8 +284,9 @@ namespace Nodes
 		Dictionary(
 			Token firstToken,
 			vector<Expression*> keys,
-			vector<Expression*> values)
-			: Expression(DICTIONARY, firstToken)
+			vector<Expression*> values,
+			FileContext* fileContext)
+			: Expression(DICTIONARY, firstToken, fileContext)
 		{
 			this->keys = keys;
 			this->values = values;
@@ -274,13 +296,14 @@ namespace Nodes
 		vector<Expression*> values;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class DotField : public Expression
 	{
 	public:
-		DotField(Expression* root, Token dotToken, Token fieldNameToken)
-			: Expression(DOT_FIELD, root->firstToken)
+		DotField(Expression* root, Token dotToken, Token fieldNameToken, FileContext* fileContext)
+			: Expression(DOT_FIELD, root->firstToken, fileContext)
 		{
 			this->root = root;
 			this->dotToken = dotToken;
@@ -292,35 +315,40 @@ namespace Nodes
 		Token fieldNameToken;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class ExpressionAsExecutable : public Executable
 	{
 	public:
-		ExpressionAsExecutable(Expression* expression)
-			: Executable(EXPRESSION_AS_EXECUTABLE, expression->firstToken)
+		ExpressionAsExecutable(Expression* expression, FileContext* fileContext)
+			: Executable(EXPRESSION_AS_EXECUTABLE, expression->firstToken, fileContext)
 		{
 			this->expression = expression;
 		}
 		Expression* expression;
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class FieldDefinition : public Executable
 	{
 	public:
-		FieldDefinition(Token firstToken, Token nameToken, Expression* value)
-			: Executable(FIELD_DEFINITION, firstToken)
+		FieldDefinition(Token firstToken, Token nameToken, Expression* value, FileContext* fileContext)
+			: Executable(FIELD_DEFINITION, firstToken, fileContext)
 		{
 			this->isStatic = false;
 			this->nameToken = nameToken;
+			this->name = nameToken.value;
 			this->defaultValue = value;
 		}
 		bool isStatic;
 		Token nameToken;
+		string name;
 		Expression* defaultValue;
 
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class ForLoop : public Executable
@@ -331,8 +359,9 @@ namespace Nodes
 			vector<Executable*> init,
 			Expression* condition,
 			vector<Executable*> step,
-			vector<Executable*> code)
-			: Executable(FOR_LOOP, forToken)
+			vector<Executable*> code,
+			FileContext* fileContext)
+			: Executable(FOR_LOOP, forToken, fileContext)
 		{
 			this->init = init;
 			this->condition = condition;
@@ -346,6 +375,7 @@ namespace Nodes
 		vector<Executable*> code;
 
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class FunctionDefinition : public Executable
@@ -357,8 +387,9 @@ namespace Nodes
 			Token nameToken,
 			vector<Token> argNames,
 			vector<Expression*> argValues,
-			vector<Executable*> body)
-			: Executable(FUNCTION_DEFINITION, firstToken)
+			vector<Executable*> body,
+			FileContext* fileContext)
+			: Executable(FUNCTION_DEFINITION, firstToken, fileContext)
 		{
 			this->functionToken = functionToken;
 			this->isStatic = false;
@@ -377,13 +408,14 @@ namespace Nodes
 		vector<Executable*> body;
 
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class FunctionInvocation : public Expression
 	{
 	public:
-		FunctionInvocation(Expression* root, Token openParen, vector<Expression*> args)
-			: Expression(FUNCTION_INVOCATION, root->firstToken)
+		FunctionInvocation(Expression* root, Token openParen, vector<Expression*> args, FileContext* fileContext)
+			: Expression(FUNCTION_INVOCATION, root->firstToken, fileContext)
 		{
 			this->root = root;
 			this->args = args;
@@ -394,6 +426,7 @@ namespace Nodes
 		vector<Expression*> args;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class IfStatement : public Executable
@@ -404,8 +437,9 @@ namespace Nodes
 			Expression* condition,
 			vector<Executable*> trueCode,
 			bool hasFalseCode,
-			vector<Executable*> falseCode)
-			: Executable(IF_STATEMENT, ifToken)
+			vector<Executable*> falseCode,
+			FileContext* fileContext)
+			: Executable(IF_STATEMENT, ifToken, fileContext)
 		{
 			this->condition = condition;
 			this->trueCode = trueCode;
@@ -417,6 +451,21 @@ namespace Nodes
 		vector<Executable*> falseCode;
 		
 		virtual void SetLocalIdPass();
+		virtual Executable* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
+	};
+
+	class ImportStatement : public Executable
+	{
+	public:
+		ImportStatement(
+			Token firstToken,
+			vector<string> delimitedNames,
+			FileContext* fileContext)
+			: Executable(IMPORT_STATEMENT, firstToken, fileContext)
+		{
+			this->delimitedNames = delimitedNames;
+		}
+		vector<string> delimitedNames;
 	};
 
 	class InlineIncrement : public Expression
@@ -426,8 +475,9 @@ namespace Nodes
 			Token firstToken,
 			Expression* expression,
 			Token incrementToken,
-			bool isPrefix) 
-			: Expression(INLINE_INCREMENT, firstToken)
+			bool isPrefix,
+			FileContext* fileContext)
+			: Expression(INLINE_INCREMENT, firstToken, fileContext)
 		{
 			this->expression = expression;
 			this->incrementToken = incrementToken;
@@ -438,12 +488,14 @@ namespace Nodes
 		bool isPrefix;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class IntegerConstant : public Expression
 	{
 	public:
-		IntegerConstant(Token token, int value) : Expression(INTEGER_CONSTANT, token)
+		IntegerConstant(Token token, int value, FileContext* fileContext)
+			: Expression(INTEGER_CONSTANT, token, fileContext)
 		{
 			this->value = value;
 		}
@@ -452,10 +504,27 @@ namespace Nodes
 		virtual void SetLocalIdPass();
 	};
 
+	class Namespace : public Executable
+	{
+	public:
+		Namespace(Token namespaceToken, Token nameToken, vector<Executable*> members, FileContext* fileContext)
+			: Executable(NAMESPACE, namespaceToken, fileContext)
+		{
+			this->name = nameToken.value;
+			this->members = members;
+		}
+		
+		string name;
+		vector<Executable*> members;
+
+		// no need for resolution methods as this will get flattened out in the first pass
+		// to create the global fully-qualified lookup of members.
+	};
+
 	class NullConstant : public Expression
 	{
 	public:
-		NullConstant(Token token) : Expression(NULL_CONSTANT, token) { }
+		NullConstant(Token token, FileContext* fileContext) : Expression(NULL_CONSTANT, token, fileContext) { }
 
 		virtual void SetLocalIdPass();
 	};
@@ -463,7 +532,8 @@ namespace Nodes
 	class StringConstant : public Expression
 	{
 	public:
-		StringConstant(Token token, string value) : Expression(STRING_CONSTANT, token)
+		StringConstant(Token token, string value, FileContext* fileContext)
+			: Expression(STRING_CONSTANT, token, fileContext)
 		{
 			this->value = value;
 		}
@@ -479,8 +549,9 @@ namespace Nodes
 			Expression* condition,
 			Token questionToken,
 			Expression* trueExpression,
-			Expression* falseExpression)
-			: Expression(TERNARY, condition->firstToken)
+			Expression* falseExpression,
+			FileContext* fileContext)
+			: Expression(TERNARY, condition->firstToken, fileContext)
 		{
 			this->condition = condition;
 			this->trueValue = trueExpression;
@@ -493,18 +564,21 @@ namespace Nodes
 		Token questionToken;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 
 	class Variable : public Expression
 	{
 	public:
-		Variable(Token token, string name) : Expression(VARIABLE, token)
+		Variable(Token token, string name, FileContext* fileContext)
+			: Expression(VARIABLE, token, fileContext)
 		{
 			this->name = name;
 		}
 		string name;
 
 		virtual void SetLocalIdPass();
+		virtual Expression* ResolveNameReferences(const unordered_map<string, Executable*>& lookup);
 	};
 }
 

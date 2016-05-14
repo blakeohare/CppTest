@@ -1,6 +1,7 @@
 #ifndef EXPRESSIONPARSER_H
 #define EXPRESSIONPARSER_H
 
+#include "filecontext.h"
 #include "nodes.h"
 #include "../tokens/tokenstream.h"
 #include "../tokens/token.h"
@@ -16,7 +17,7 @@ using namespace Tokens;
 
 namespace Parser
 {
-	Expression* parseExpression(TokenStream* tokens);
+	Expression* parseExpression(TokenStream* tokens, FileContext* fileContext);
 }
 
 #endif
